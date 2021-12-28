@@ -15,7 +15,7 @@ service mysql restart
 
 echo 'Setting up Test LDAP'
 docker pull rroemhild/test-openldap
-docker run --privileged -d -p 389:389 rroemhild/test-openldap
+docker run --rm -d -p 10389:10389 rroemhild/test-openldap
 
 sed -i 's/MATTERMOST_PASSWORD/#MATTERMOST_PASSWORD/' /vagrant/db_setup.sql
 echo "Setting up database"
@@ -34,7 +34,7 @@ echo /vagrant/mattermost-$mattermost_version-linux-amd64.tar.gz
 
 if [[ ! -f /vagrant/mattermost-$mattermost_version-linux-amd64.tar.gz ]]; then
 	echo "Downloading Mattermost"
-	wget -P /vagrant/ https://releases.mattermost.com/$mattermost_version/mattermost-$mattermost_version-linux-amd64.tar.gz
+	wget --progress=bar:force:noscroll -P /vagrant/ https://releases.mattermost.com/$mattermost_version/mattermost-$mattermost_version-linux-amd64.tar.gz
 fi
 
 cp /vagrant/mattermost-$mattermost_version-linux-amd64.tar.gz ./
@@ -48,7 +48,7 @@ mkdir /opt/mattermost/data
 mv /opt/mattermost/config/config.json /opt/mattermost/config/config.orig.json
 jq -s '.[0] * .[1]' /opt/mattermost/config/config.orig.json /vagrant/config.json > /opt/mattermost/config/config.json
 
-cp /vagrant/e20license.txt /opt/mattermost/license.txt
+cp /vagrant/e20.mattermost-license /opt/mattermost/license.txt
 
 useradd --system --user-group mattermost
 chown -R mattermost:mattermost /opt/mattermost
@@ -57,17 +57,18 @@ chmod -R g+w /opt/mattermost
 cp /vagrant/mattermost.service /lib/systemd/system/mattermost.service
 systemctl daemon-reload
 
+systemctl start mysql
+systemctl start mattermost
+
+
 cd /opt/mattermost
 
-bin/mattermost user create --email admin@planetexpress.com --username admin --password admin --system_admin
-bin/mattermost team create --name planet-express --display_name "Planet Express" --email "admin@planetexpress.com"
-bin/mattermost team create --name olympus --display_name "Administrative Staff" --email "admin@planetexpress.com"
-bin/mattermost team create --name ship-crew --display_name "Ship's Crew" --email "admin@planetexpress.com"
-bin/mattermost team add planet-express admin@planetexpress.com
-bin/mattermost team add olympus admin@planetexpress.com
-
-service mysql start
-service mattermost start
+sudo -u mattermost bin/mmctl --local user create --email admin@planetexpress.com --username admin --password admin --system_admin
+sudo -u mattermost bin/mmctl --local team create --name planet-express --display_name "Planet Express" --email "admin@planetexpress.com"
+sudo -u mattermost bin/mmctl --local team create --name olympus --display_name "Administrative Staff" --email "admin@planetexpress.com"
+sudo -u mattermost bin/mmctl --local team create --name ship-crew --display_name "Ship's Crew" --email "admin@planetexpress.com"
+sudo -u mattermost bin/mmctl --local team users add planet-express admin@planetexpress.com
+sudo -u mattermost bin/mmctl --local team users add olympus admin@planetexpress.com
 
 # IP_ADDR=`/sbin/ifconfig eth0 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}'`
 

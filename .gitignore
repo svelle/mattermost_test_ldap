@@ -1,6 +1,8 @@
 .vagrant
+.vscode
 .DS_Store
 mattermost*.gz
 config.vagrant.json
 e10license.txt
 e20license.txt
+*.mattermost-license
